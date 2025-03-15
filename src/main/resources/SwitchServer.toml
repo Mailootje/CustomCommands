@@ -1,0 +1,13 @@
+# Command Configuration for server switching
+
+Enabled = true
+Name = "skyblock"
+Aliases = []
+Description = "Sends the player to the backend server"
+Permission = "customcommands.switch"
+Response = "<green>Switching servers..."
+UsePrefix = true
+Cooldown = 0
+
+# The name of the backend server (must match the name as registered in Velocity)
+TargetServer = "skyblock"

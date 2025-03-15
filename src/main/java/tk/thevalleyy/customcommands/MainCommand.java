@@ -61,7 +61,6 @@ public class MainCommand {
                                                         argument = "";
                                                     }
 
-                                                    // autocomplete already typed argument
                                                     String finalArgument = argument;
                                                     commands.forEach(
                                                             cmd -> {
@@ -74,7 +73,6 @@ public class MainCommand {
                                                                                                 .deserialize("<gray>" + cmd.get(1))));
                                                                     }
                                                                 } catch (IllegalArgumentException e) {
-                                                                    // autocomplete all arguments
                                                                     builder.suggest(
                                                                             cmd.get(0),
                                                                             VelocityBrigadierMessage.tooltip(
@@ -88,7 +86,7 @@ public class MainCommand {
                                         .executes(
                                                 context -> {
                                                     String argumentProvided = context.getArgument("subcommand", String.class);
-                                                    CommandSource player = context.getSource(); // no console check necessary.
+                                                    CommandSource player = context.getSource();
 
                                                     boolean commandFound = false;
                                                     for (List<String> cmd : commands) {
@@ -107,7 +105,7 @@ public class MainCommand {
                                                             }
 
                                                             switch (commandName) {
-                                                                case "reload": // reload the configuration file
+                                                                case "reload":
                                                                     ConfigLoader configLoader = new ConfigLoader();
                                                                     boolean configLoaded =
                                                                             configLoader.loadConfigVariables(CustomCommands.folder);
@@ -126,7 +124,6 @@ public class MainCommand {
                                                                     }
 
                                                                     try {
-                                                                        // create the default command
                                                                         if (!registerCustomCommands.createDefaultCommand(commandsFolder)) {
                                                                             player.sendMessage(
                                                                                     MiniMessage.miniMessage()
@@ -136,7 +133,6 @@ public class MainCommand {
                                                                             return 0;
                                                                         }
 
-                                                                        // load all custom commands
                                                                         if (!registerCustomCommands.loadCustomCommands(commandsFolder)) {
                                                                             player.sendMessage(
                                                                                     MiniMessage.miniMessage()
@@ -162,7 +158,7 @@ public class MainCommand {
 
                                                                     break;
 
-                                                                case "help": // display the dynamic generated help message
+                                                                case "help":
                                                                     player.sendMessage(
                                                                             MiniMessage.miniMessage()
                                                                                     .deserialize(
@@ -171,7 +167,7 @@ public class MainCommand {
                                                                                                     + helpList));
                                                                     break;
 
-                                                                case "version": // display the plugin version
+                                                                case "version":
                                                                     player.sendMessage(
                                                                             MiniMessage.miniMessage()
                                                                                     .deserialize(
@@ -182,8 +178,7 @@ public class MainCommand {
                                                                                                     + CustomCommands.Version));
                                                                     break;
 
-                                                                case "list": // list all custom commands
-
+                                                                case "list":
                                                                     List<List<String>> commandList = registerCustomCommands.getCommandList(commandsFolder);
                                                                     if (commandList == null) {
                                                                         player.sendMessage(
@@ -204,23 +199,22 @@ public class MainCommand {
                                                                                 .append((ccmd.get(1) == "true") ? "<hover:show_text:'<gray>Enabled'><green>✔</hover> " : "<hover:show_text:'<gray>Disabled'><red>❌</hover> ")
                                                                                 .append("<yellow>/")
                                                                                 .append("<hover:show_text:'<gray>Click to run'><click:suggest_command:/")
-                                                                                .append(ccmd.get(0)) // name
+                                                                                .append(ccmd.get(0))
                                                                                 .append(">")
                                                                                 .append(ccmd.get(0))
                                                                                 .append("</click></hover> ")
                                                                                 .append("<gray><hover:show_text:'<gray>")
-                                                                                .append(ccmd.get(2)) // aliases
+                                                                                .append(ccmd.get(2))
                                                                                 .append("'><gray>A</hover> :: ")
                                                                                 .append("<gray><hover:show_text:'<gray>")
-                                                                                .append(ccmd.get(3)) // description
+                                                                                .append(ccmd.get(3))
                                                                                 .append("'><gray>D</hover> :: ")
                                                                                 .append("<gray><hover:show_text:'<gray>")
-                                                                                .append(ccmd.get(4).isEmpty() ? "None" : ccmd.get(4)) // permission
+                                                                                .append(ccmd.get(4).isEmpty() ? "None" : ccmd.get(4))
                                                                                 .append("'><gray>P</hover> :: ")
-                                                                                .append(ccmd.get(6) == "true" ? "<hover:show_text:'<green>✔'><gray>P?</hover>" : "<hover:show_text:'<red>❌'><gray>P?</hover>") // prefix enabled?
+                                                                                .append(ccmd.get(6) == "true" ? "<hover:show_text:'<green>✔'><gray>P?</hover>" : "<hover:show_text:'<red>❌'><gray>P?</hover>")
                                                                                 .append("\n");
                                                                     }
-
 
                                                                     player.sendMessage(
                                                                             MiniMessage.miniMessage()
@@ -231,7 +225,7 @@ public class MainCommand {
 
                                                                     break;
 
-                                                                default: // unknown command
+                                                                default:
                                                                     player.sendMessage(
                                                                             MiniMessage.miniMessage()
                                                                                     .deserialize(

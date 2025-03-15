@@ -6,7 +6,9 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.velocitypowered.api.command.BrigadierCommand;
 import com.velocitypowered.api.command.CommandSource;
+import com.velocitypowered.api.proxy.server.RegisteredServer;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import com.velocitypowered.api.proxy.ProxyServer;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,6 +20,7 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class registerCustomCommands {
     public boolean createDefaultCommand(Path path) {
@@ -65,7 +68,6 @@ public class registerCustomCommands {
 
                 @Override
                 public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-                    // Handle file visit failure
                     return FileVisitResult.CONTINUE;
                 }
             });
@@ -85,16 +87,11 @@ public class registerCustomCommands {
 
                 Toml toml = new Toml().read(file.toFile());
 
-
-                // does the toml file exist?
                 if (toml == null) {
                     throw new Exception("Failed to load the toml file: " + file.getFileName());
                 }
 
-                // is the command enabled?
                 if (toml.getBoolean("Enabled").equals(false)) continue;
-                // CustomCommands.logger.info("Loading: " + file.getFileName() + " (" + toml.getBoolean("Enabled") + ")");
-
 
                 // get all the values from the toml file
                 String name = toml.getString("Name");
@@ -104,10 +101,11 @@ public class registerCustomCommands {
                 String response = toml.getString("Response");
                 boolean usePrefix = toml.getBoolean("UsePrefix");
                 long cooldown = toml.getLong("Cooldown");
+                // New: read the optional TargetServer key (defaulting to an empty string if not present)
+                String targetServer = toml.getString("TargetServer", "");
 
-                // register the command
-                registerCustomCommands.createBrigadierCommand(name, aliases, description, permission, response, usePrefix, cooldown);
-
+                // register the command using the overloaded method
+                createBrigadierCommand(name, aliases, description, permission, response, usePrefix, cooldown, targetServer);
             }
         } catch (Exception e) {
             CustomCommands.logger.error(e.getMessage());
@@ -116,24 +114,49 @@ public class registerCustomCommands {
         return noErrors;
     }
 
-    // create a brigadier command
+    // create a brigadier command without target server (for backward compatibility)
     public static void createBrigadierCommand(String name, List<String> aliases, String description, String permission, String response, boolean usePrefix, long cooldown) {
+        createBrigadierCommand(name, aliases, description, permission, response, usePrefix, cooldown, "");
+    }
+
+    // create a brigadier command with optional target server
+    public static void createBrigadierCommand(String name, List<String> aliases, String description, String permission, String response, boolean usePrefix, long cooldown, String targetServer) {
         LiteralCommandNode<CommandSource> command =
                 LiteralArgumentBuilder.<CommandSource>literal(name)
-                        .executes(
-                                context -> {
-                                    CommandSource player = context.getSource();
-                                    if ((!player.hasPermission(permission) && !permission.isEmpty()) && !player.hasPermission("customcommands.admin")) {
-                                        player.sendMessage(
-                                                MiniMessage.miniMessage().deserialize(CustomCommands.NoPermission));
+                        .executes(context -> {
+                            CommandSource source = context.getSource();
+                            // Permission check
+                            if ((!source.hasPermission(permission) && !permission.isEmpty())
+                                    && !source.hasPermission("customcommands.admin")) {
+                                source.sendMessage(MiniMessage.miniMessage().deserialize(CustomCommands.NoPermission));
+                                return 0;
+                            }
+
+                            // If a target server is provided, attempt to connect the player.
+                            if (targetServer != null && !targetServer.isEmpty()) {
+                                if (source instanceof com.velocitypowered.api.proxy.Player) {
+                                    com.velocitypowered.api.proxy.Player player = (com.velocitypowered.api.proxy.Player) source;
+                                    Optional<RegisteredServer> serverOptional = CustomCommands.getProxy().getServer(targetServer);
+                                    if (serverOptional.isPresent()) {
+                                        player.createConnectionRequest(serverOptional.get()).connect();
+                                        return Command.SINGLE_SUCCESS;
+                                    } else {
+                                        player.sendMessage(MiniMessage.miniMessage().deserialize(
+                                                CustomCommands.Prefix + "<red>Target server not found."));
                                         return 0;
                                     }
-
-                                    player.sendMessage(
-                                            MiniMessage.miniMessage()
-                                                    .deserialize((usePrefix ? CustomCommands.Prefix : "") + response));
-                                    return Command.SINGLE_SUCCESS;
-                                })
+                                } else {
+                                    source.sendMessage(MiniMessage.miniMessage().deserialize(
+                                            CustomCommands.Prefix + "<red>This command can only be executed by a player."));
+                                    return 0;
+                                }
+                            } else {
+                                // Otherwise, send the usual response.
+                                source.sendMessage(MiniMessage.miniMessage().deserialize(
+                                        (usePrefix ? CustomCommands.Prefix : "") + response));
+                            }
+                            return Command.SINGLE_SUCCESS;
+                        })
                         .build();
 
         CustomCommands.registerCommand(name, aliases, new BrigadierCommand(command));
@@ -148,13 +171,10 @@ public class registerCustomCommands {
             for (Path file : tomlFiles) {
                 Toml toml = new Toml().read(file.toFile());
 
-
-                // does the toml file exist?
                 if (toml == null) {
                     throw new Exception("Failed to load the toml file: " + file.getFileName());
                 }
 
-                // get all the values from the toml file
                 String name = toml.getString("Name");
                 boolean enabled = toml.getBoolean("Enabled");
                 List<String> aliases = toml.getList("Aliases");
@@ -163,8 +183,8 @@ public class registerCustomCommands {
                 String response = toml.getString("Response");
                 boolean usePrefix = toml.getBoolean("UsePrefix");
                 long cooldown = toml.getLong("Cooldown");
+                String targetServer = toml.getString("TargetServer", "");
 
-                // create a list with all the commands attributes
                 List<String> commandAttributes = new ArrayList<>();
                 commandAttributes.add(name);
                 commandAttributes.add(String.valueOf(enabled));
@@ -174,6 +194,7 @@ public class registerCustomCommands {
                 commandAttributes.add(response);
                 commandAttributes.add(String.valueOf(usePrefix));
                 commandAttributes.add(String.valueOf(cooldown));
+                commandAttributes.add(targetServer);
 
                 commandList.add(commandAttributes);
             }

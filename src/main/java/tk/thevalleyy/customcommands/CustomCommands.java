@@ -14,7 +14,6 @@ import org.slf4j.Logger;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Plugin(
         id = "customcommands",
@@ -23,7 +22,6 @@ import java.util.stream.Collectors;
         description = "A plugin that allows you to create custom commands.",
         url = "https://github.com/thevalleyy/CustomCommands",
         authors = {"thevalleyy"})
-
 public class CustomCommands {
     private boolean isLoadedCorrectly = true;
     private static ProxyServer proxy;
@@ -44,9 +42,9 @@ public class CustomCommands {
     public CustomCommands(ProxyServer proxy, Logger logger, @DataDirectory final Path folder)
             throws IOException {
 
-        this.proxy = proxy;
-        this.logger = logger;
-        this.folder = folder;
+        CustomCommands.proxy = proxy;
+        CustomCommands.logger = logger;
+        CustomCommands.folder = folder;
         instance = this;
 
         // create an instance of ConfigLoader
@@ -64,7 +62,6 @@ public class CustomCommands {
         registerCustomCommands registerCustomCommands = new registerCustomCommands();
         Path commandsFolder = Path.of(folder + "/Commands/");
 
-
         // create the default command
         if (!registerCustomCommands.createDefaultCommand(commandsFolder)) {
             logger.error("Couldn't create default command file. Disabling plugin functionality.");
@@ -78,8 +75,6 @@ public class CustomCommands {
             isLoadedCorrectly = false;
             return;
         }
-
-        // logger.info("CustomCommands has been enabled. (" + BuildConstants.VERSION + ")");
     }
 
     // Initialization
@@ -109,9 +104,13 @@ public class CustomCommands {
         commandManager.register(commandMeta, command);
     }
 
+    // Getter for ProxyServer to be used in other classes (e.g. for server switching)
+    public static ProxyServer getProxy() {
+        return proxy;
+    }
+
     // return instance
     public static CustomCommands getInstance() {
         return instance;
     }
-
 }
